@@ -21,25 +21,31 @@ def parse_resume(text):
         "education": []
     }
     
-    # Extract name (assuming the first sentence contains the name)
-    if doc.ents:
-        resume_data["name"] = doc.ents[0].text
-    
-    # Extract email and phone number
+    # Extract email
     email_pattern = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
-    phone_pattern = re.compile(r"\b\d{10}\b")
+    email_matches = email_pattern.findall(text)
+    if email_matches:
+        resume_data["email"] = email_matches[0]
     
-    for token in doc:
-        if email_pattern.match(token.text):
-            resume_data["email"] = token.text
-        if phone_pattern.match(token.text):
-            resume_data["phone"] = token.text
+    # Extract phone number
+    phone_pattern = re.compile(r"\(?\b[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b")
+    phone_matches = phone_pattern.findall(text)
+    if phone_matches:
+        resume_data["phone"] = phone_matches[0]
     
-    # Extract skills (example keywords, customize as needed)
-    skill_keywords = {"Python", "Java", "C++", "Machine Learning", "Data Analysis"}
-    for token in doc:
-        if token.text in skill_keywords:
-            resume_data["skills"].append(token.text)
+    # Extract name (using a heuristic approach for the first few lines of the document)
+    lines = text.split('\n')
+    for line in lines[:10]:  # Look at the first 10 lines to find the name
+        if line.strip():  # Skip empty lines
+            doc_line = nlp(line.strip())
+            for ent in doc_line.ents:
+                if ent.label_ == "PERSON":
+                    resume_data["name"] = ent.text
+                    break
+            if resume_data["name"]:
+                break
+    
+
     
     # Extract experience and education (based on common section headers)
     experience_section = False
@@ -66,4 +72,21 @@ pdf_path = "_Resume - Amaad Rajpar.pdf"
 resume_text = extract_text_from_pdf(pdf_path)
 parsed_resume = parse_resume(resume_text)
 
-print(parsed_resume)
+print("Name:", parsed_resume["name"])
+print()
+print("Email:", parsed_resume["email"])
+print()
+print("Phone:", parsed_resume["phone"])
+print()
+print("Skills:")
+for skill in parsed_resume["skills"]:
+    print(f"- {skill}")
+print()
+print("Experience:")
+for exp in parsed_resume["experience"]:
+    print(f"- {exp}")
+print()
+print("Education:")
+for edu in parsed_resume["education"]:
+    print(f"- {edu}")
+print()
